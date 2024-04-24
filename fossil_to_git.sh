@@ -78,7 +78,7 @@ fossil git export "$MIRROR" -R "$FOSSIL" --mainbranch "$BRANCH"
 git -C "$MIRROR" checkout HEAD -f
 
 # instead, here's an aggressive and deprecated git command
-git -C "$MIRROR" filter-branch --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' "$BEFORE"..HEAD
+git -C "$MIRROR" filter-branch -f --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' "$BEFORE"..HEAD
 
 
 echo "done"
