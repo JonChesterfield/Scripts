@@ -55,43 +55,40 @@ fi
 
 
 TMPDIR="$(mktemp -d)"
-# trap 'rm -rf -- "$TMPDIR"' EXIT
+# Cleanup wants to try all the steps even if some don't succeed
+trap 'set +e ; git -C "$MIRROR" remote remove local ; rm -rf -- "$TMPDIR"' EXIT
 
 echo "Using TMPDIR $TMPDIR"
 
-GITIMPORT="$TMPDIR/git.txt"
-
 GITWORKDIR="$TMPDIR/git"
-
-
-echo "Using $GITIMPORT, $GITWORKDIR"
 
 BEFORE=$(git -C "$MIRROR" rev-parse HEAD)
 
 echo "Before = $BEFORE"
 
-
+# Copy mirror into the temporary git repo
 git clone "$MIRROR" "$GITWORKDIR"
 
-# initial plan was use --debug FILE, edit the text, make a repo from that
-# but fossil fatal-errors for not creating a marks file
+# Export fossil on top of said temporary repo
 fossil git export "$GITWORKDIR" -R "$FOSSIL" --mainbranch "$BRANCH"
 
 # git's fast-import doesn't change the working directory
 git -C "$GITWORKDIR" checkout HEAD -f
 
+# initial plan was use --debug FILE, edit the text, make a repo from that
+# but fossil fatal-errors for not creating a marks file
 # instead, here's an aggressive and deprecated git command
 # would rather rewrite "$BEFORE"..HEAD but fossil then re-injects the noise
 git -C "$GITWORKDIR" filter-branch -f --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' HEAD
 
-! git -C "$MIRROR" remote remove local
+# Update mirror using the contents of said temporary repo
+! git -C "$MIRROR" remote remove local # in case previous run failed
 git -C "$MIRROR" remote add local "$GITWORKDIR"
 git -C "$MIRROR" fetch local
 
+# This is like cherry-pick, but it doesn't fall over on empty commits or want an editor window
 git -C "$MIRROR" reset --hard local/"$BRANCH"
 git -C "$MIRROR" rebase "$BRANCH"
-
-git -C "$MIRROR" remote remove local
 
 echo "done"
 exit 0
