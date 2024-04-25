@@ -10,6 +10,8 @@
 # Should be a no-op when run on a fossil repo that hasn't changed since last time,
 # i.e. cron friendly. Doesn't update the mirror if nothing changed.
 
+# Note, better if fossil user contact $USER is set to an email git recognises first
+
 set -e
 set -x
 set -o pipefail
@@ -25,9 +27,6 @@ GITCOPY=$2
 EXTERNAL=$3
 
 BRANCH=trunk
-echo "Reflect fossil $1 into git $2"
-
-# Note, better if fossil user contact $USER is set to an email git recognises first
 
 if [[ -f "$FOSSIL" ]]
 then
@@ -66,7 +65,7 @@ fi
 
 if [[ -z $EXTERNAL ]]
 then
-    echo "No external mirror specified, none will be set up"
+    echo "No external mirror specified, none will be set up this time"
 else
     echo "Setting remote external as $EXTERNAL"
     ! git -C "$GITCOPY" remote remove external
@@ -77,13 +76,9 @@ TMPDIR="$(mktemp -d)"
 # Cleanup wants to try all the steps even if some don't succeed
 trap 'set +e ; git -C "$GITCOPY" remote remove local ; rm -rf -- "$TMPDIR"' EXIT
 
-echo "Using TMPDIR $TMPDIR"
-
 GITWORKDIR="$TMPDIR/git"
 
 BEFORE=$(git -C "$GITCOPY" rev-parse "$BRANCH")
-
-echo "Before = $BEFORE"
 
 # Copy mirror into the temporary git repo
 git clone "$GITCOPY" "$GITWORKDIR"
@@ -112,20 +107,16 @@ git -C "$GITCOPY" rebase "$BRANCH"
 
 AFTER=$(git -C "$GITCOPY" rev-parse "$BRANCH")
 
-
 if [[ "$BEFORE" == "$AFTER" ]]; then
     echo "No change to underlying repo"
 else
-    echo "Before running, $BEFORE. After running, $AFTER"
-
     if git -C "$GITCOPY" config remote.external.url > /dev/null;
     then
-        echo "external remote configured, pushing to it"
+        echo "Repo changed, external remote configured, pushing to it"
         git -C "$GITCOPY" push external --mirror
     else
-        echo "no external defined" ;
+        echo "Repo changed but no external mirror defined" ;
     fi
 fi  
 
-echo "done"
 exit 0

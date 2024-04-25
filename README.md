@@ -1,0 +1,1 @@
+Bash scripts used during development. Initially themed around doing things with git.
