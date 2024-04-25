@@ -61,25 +61,37 @@ echo "Using TMPDIR $TMPDIR"
 
 GITIMPORT="$TMPDIR/git.txt"
 
-HACKEDGITIMPORT="$TMPDIR/hackedgit.txt"
+GITWORKDIR="$TMPDIR/git"
 
-echo "Using files $GITIMPORT, $HACKEDGITIMPORT"
+
+echo "Using $GITIMPORT, $GITWORKDIR"
 
 BEFORE=$(git -C "$MIRROR" rev-parse HEAD)
 
 echo "Before = $BEFORE"
 
 
+git clone "$MIRROR" "$GITWORKDIR"
+
 # initial plan was use --debug FILE, edit the text, make a repo from that
 # but fossil fatal-errors for not creating a marks file
-fossil git export "$MIRROR" -R "$FOSSIL" --mainbranch "$BRANCH"
+fossil git export "$GITWORKDIR" -R "$FOSSIL" --mainbranch "$BRANCH"
 
 # git's fast-import doesn't change the working directory
-git -C "$MIRROR" checkout HEAD -f
+git -C "$GITWORKDIR" checkout HEAD -f
 
 # instead, here's an aggressive and deprecated git command
-git -C "$MIRROR" filter-branch -f --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' "$BEFORE"..HEAD
+# would rather rewrite "$BEFORE"..HEAD but fossil then re-injects the noise
+git -C "$GITWORKDIR" filter-branch -f --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' HEAD
 
+! git -C "$MIRROR" remote remove local
+git -C "$MIRROR" remote add local "$GITWORKDIR"
+git -C "$MIRROR" fetch local
+
+git -C "$MIRROR" reset --hard local/"$BRANCH"
+git -C "$MIRROR" rebase "$BRANCH"
+
+git -C "$MIRROR" remote remove local
 
 echo "done"
 exit 0
