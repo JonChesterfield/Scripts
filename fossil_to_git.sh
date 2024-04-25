@@ -53,7 +53,6 @@ else
     git -C "$MIRROR" commit --allow-empty -n -m "Initial commit"
 fi
 
-
 TMPDIR="$(mktemp -d)"
 # Cleanup wants to try all the steps even if some don't succeed
 trap 'set +e ; git -C "$MIRROR" remote remove local ; rm -rf -- "$TMPDIR"' EXIT
