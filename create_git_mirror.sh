@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Set up a directory as a git repo that reflects changes from one
+# git repo to another, e.g. to export a local one to github
+# Takes a non-empty list of branches and only copies those ones.
+
 set -e
 set -x
 set -o pipefail
@@ -23,9 +27,6 @@ then
     exit 1
 fi
 
-TMPDIR="$(mktemp -d)"
-trap 'rm -rf -- "$TMPDIR"' EXIT
-
 
 echo "$WORKDIR does not exist, creating directory"
 mkdir "$WORKDIR"
@@ -37,6 +38,27 @@ for BRANCH in $BRANCHES; do
     git -C "$WORKDIR" branch "$BRANCH" internal/"$BRANCH"
 done
 
+# Github has size limitations. These can be worked around by updating the external
+# with pieces that are (probably) smaller than 2gb before using push mirror to put
+# the state as it should be. Incremental pushes are hoped to not hit this.
+
+n=$(git -C "$WORKDIR" rev-list HEAD --count)
+BATCH=500
+for i in $(seq $n -$BATCH 1); do
+    # get the hash of the commit to push
+    h=$(git -C "$WORKDIR" log --first-parent --reverse --format=format:%H --skip $i -n1)
+    if [[ ! -z "$h" ]]
+    then
+        echo "Pushing $h..."
+        git -C "$WORKDIR" push external ${h}:refs/heads/"$BRANCH" -f
+    fi    
+done
+
+
+git -C $WORKDIR push --mirror external
+
 set +x
 echo "To update this mirror:"
 echo "git -C $WORKDIR fetch --all && git -C $WORKDIR push --mirror external"
+
+
