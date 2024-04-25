@@ -2,11 +2,16 @@
 
 # Arrange to mirror specific branches from an internal git repo to somewhere else
 # For example, export release branches to github without also posting various dev branches
+# Does the initial clone by pushing multiple subsets of the repo to try to avoid a github limit
+
 # Takes at least four arguments
 # Internal git location
 # External git location
 # What directory to set up as the staging ground
-# One or more branches to mirror
+# Remainder are one or more branches to mirror
+
+# Example copying from a local machine "wx" to github, a repo > 2gb, some branches of.
+# ./create_git_mirror.sh wx:llvm-project git@github.com:JonChesterfield/mirror-llvm.git /tmp/llvm_mirror main jc_varargs_pr jc_varargs_libc
 
 set -e
 set -x
@@ -23,28 +28,20 @@ WORKDIR=$3
 shift 3
 BRANCHES="$@"
 
-echo "Git mirror. From $INTERNAL to $EXTERNAL, workdir $WORKDIR, branches {$BRANCHES}"
-
 if [[ -e "$WORKDIR" ]]
 then
-    echo "$WORKDIR already exists, abort"
+    echo "Working directory $WORKDIR already exists, abort"
     exit 1
 fi
 
+echo "Creating git mirror. From $INTERNAL to $EXTERNAL, workdir $WORKDIR, branches {$BRANCHES}"
 
-echo "$WORKDIR does not exist, creating directory"
 mkdir "$WORKDIR"
 git -C "$WORKDIR" init --bare
 git -C "$WORKDIR" remote add internal "$INTERNAL"
 git -C "$WORKDIR" remote add external "$EXTERNAL"
 
-# Want git fetch --all to update the local branches and not pull additional branches from the remote
-# git fetch --all won't change the local branches, and then push --mirror has nothing to do
-
-# This unfortunately means it'll create a local branch for all remote ones, no deal
-# git -C "$WORKDIR" config remote.internal.fetch '+refs/heads/*:refs/heads/*'
-
-# Set up fetch -all to retrive exactly the specified branches
+# Set up fetch -all to retrieve exactly the specified branches
 git -C "$WORKDIR" config --unset-all remote.internal.fetch
 for BRANCH in $BRANCHES; do
   git -C "$WORKDIR" config --add remote.internal.fetch '+refs/heads/'"$BRANCH"':refs/remotes/internal/'"$BRANCH"
@@ -63,24 +60,26 @@ done
 # the state as it should be. Incremental pushes are hoped to not hit this.
 
 for BRANCH in $BRANCHES; do
-    
-n=$(git -C "$WORKDIR" rev-list $BRANCH --count)
-BATCH=500
-for i in $(seq $n -$BATCH 1); do
     echo "Pushing pieces of branch $BRANCH"
-    # get the hash of the commit to push
-    h=$(git -C "$WORKDIR" log $BRANCH --first-parent --reverse --format=format:%H --skip $i -n1)
-    if [[ ! -z "$h" ]]
-    then
-        echo "Pushing $h..."
-        git -C "$WORKDIR" push external ${h}:refs/heads/"$BRANCH" -f
-    fi    
-done
-
+    
+    n=$(git -C "$WORKDIR" rev-list "$BRANCH" --count)
+    # Larger batch is faster but if it goes over 2gb then github errors out
+    # TODO: Could catch the error and dynamically adjust the batch size
+    BATCH=5000
+    for i in $(seq "$n" -$BATCH 1); do
+        echo "Piece $i, total $n"
+        # get the hash of the commit to push
+        h=$(git -C "$WORKDIR" log "$BRANCH" --first-parent --reverse --format=format:%H --skip $i -n1)
+        if [[ ! -z "$h" ]]
+        then
+            echo "Pushing $h..."
+            git -C "$WORKDIR" push external "${h}":refs/heads/"$BRANCH" -f
+        fi    
+    done
 done
 
 # Handle trailing partial batch and set the external state to what we actually want
-git -C $WORKDIR push --mirror external
+git -C "$WORKDIR" push --mirror external
 
 set +x
 echo "To update this mirror:"

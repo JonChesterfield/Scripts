@@ -3,6 +3,10 @@
 # Given a fossil repo (not checked out) and a directory, set up or update
 # a git repo based in that directory with the contents of the fossil repo
 
+# Example
+# How the fossil repo containing this script is currently posted to github
+# ./fossil_to_git.sh ~/Fossil/Scripts.fossil $(mktemp -d)/git git@github.com:JonChesterfield/Scripts.git
+
 # If given a third argument, arranges to mirror changes to that location
 # Currently accepts adding or changing an external destination and mirrors
 # to it when a destination is known, e.g. from a previous invocation
@@ -49,7 +53,7 @@ else
     echo "$GITCOPY does not exist, creating directory"
     mkdir "$GITCOPY"
     git init "$GITCOPY" --initial-branch "$BRANCH"
-    git -C "$GITCOPY" config user.name $USER
+    git -C "$GITCOPY" config user.name "$USER"
     git -C "$GITCOPY" checkout -b "$BRANCH"
 
     # Fossil works with a local directory to track things
