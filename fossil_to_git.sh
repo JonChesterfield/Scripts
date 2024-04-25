@@ -61,7 +61,7 @@ echo "Using TMPDIR $TMPDIR"
 
 GITWORKDIR="$TMPDIR/git"
 
-BEFORE=$(git -C "$MIRROR" rev-parse HEAD)
+BEFORE=$(git -C "$MIRROR" rev-parse "$BRANCH")
 
 echo "Before = $BEFORE"
 
@@ -81,6 +81,7 @@ git -C "$GITWORKDIR" checkout HEAD -f
 git -C "$GITWORKDIR" filter-branch -f --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' HEAD
 
 # Update mirror using the contents of said temporary repo
+git -C "$MIRROR" checkout "$BRANCH"
 ! git -C "$MIRROR" remote remove local # in case previous run failed
 git -C "$MIRROR" remote add local "$GITWORKDIR"
 git -C "$MIRROR" fetch local
