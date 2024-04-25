@@ -1,18 +1,28 @@
 #!/bin/bash
 
+# Given a fossil repo (not checked out) and a directory, set up or update
+# a git repo based in that directory with the contents of the fossil repo
+
+# If given a third argument, arranges to mirror changes to that location
+# Currently accepts adding or changing an external destination and mirrors
+# to it when a destination is known, e.g. from a previous invocation
+
+# Should be a no-op when run on a fossil repo that hasn't changed since last time,
+# i.e. cron friendly. Doesn't update the mirror if nothing changed.
+
 set -e
 set -x
 set -o pipefail
 
-
-if [ "$#" -ne 2 ]; then
-    echo "Missing argument, expected fossil repo then git directory"
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    echo "Check arguments, expected fossil repo, git directory [, external mirror]"
     exit 1
 fi
 
 FOSSIL=$1
-MIRROR=$2
+GITCOPY=$2
 
+EXTERNAL=$3
 
 BRANCH=trunk
 echo "Reflect fossil $1 into git $2"
@@ -27,46 +37,56 @@ else
     exit 1
 fi
 
-if [[ -e "$MIRROR" ]]
+if [[ -e "$GITCOPY" ]]
 then
-    if [[ -d "$MIRROR" ]]
+    if [[ -d "$GITCOPY" ]]
     then
-        echo "$MIRROR exists and is a directory"
+        echo "$GITCOPY exists and is a directory"
     else
-        echo "$MIRROR exists and is not a directory, abort"
+        echo "$GITCOPY exists and is not a directory, abort"
         exit 1
     fi
 else
-    echo "$MIRROR does not exist, creating directory"
-    mkdir "$MIRROR"
-    git init "$MIRROR" --initial-branch "$BRANCH"
-    git -C "$MIRROR" config user.name $USER
-    git -C "$MIRROR" checkout -b "$BRANCH"
+    echo "$GITCOPY does not exist, creating directory"
+    mkdir "$GITCOPY"
+    git init "$GITCOPY" --initial-branch "$BRANCH"
+    git -C "$GITCOPY" config user.name $USER
+    git -C "$GITCOPY" checkout -b "$BRANCH"
 
     # Fossil works with a local directory to track things
     # However it also clobbers the existing commits, so to have
     # gitignore present, put it in the fossil repo
-    # echo ".mirror_state" > "$MIRROR"/.gitignore
-    # git -C "$MIRROR" add .gitignore
+    # echo ".mirror_state" > "$GITCOPY"/.gitignore
+    # git -C "$GITCOPY" add .gitignore
 
     # Otherwise rev-parse falls over on an empty repo
-    git -C "$MIRROR" commit --allow-empty -n -m "Initial commit"
+    git -C "$GITCOPY" commit --allow-empty -n -m "Initial commit"
+fi
+
+
+if [[ -z $EXTERNAL ]]
+then
+    echo "No external mirror specified, none will be set up"
+else
+    echo "Setting remote external as $EXTERNAL"
+    ! git -C "$GITCOPY" remote remove external
+    git -C "$GITCOPY" remote add external "$EXTERNAL"
 fi
 
 TMPDIR="$(mktemp -d)"
 # Cleanup wants to try all the steps even if some don't succeed
-trap 'set +e ; git -C "$MIRROR" remote remove local ; rm -rf -- "$TMPDIR"' EXIT
+trap 'set +e ; git -C "$GITCOPY" remote remove local ; rm -rf -- "$TMPDIR"' EXIT
 
 echo "Using TMPDIR $TMPDIR"
 
 GITWORKDIR="$TMPDIR/git"
 
-BEFORE=$(git -C "$MIRROR" rev-parse "$BRANCH")
+BEFORE=$(git -C "$GITCOPY" rev-parse "$BRANCH")
 
 echo "Before = $BEFORE"
 
 # Copy mirror into the temporary git repo
-git clone "$MIRROR" "$GITWORKDIR"
+git clone "$GITCOPY" "$GITWORKDIR"
 
 # Export fossil on top of said temporary repo
 fossil git export "$GITWORKDIR" -R "$FOSSIL" --mainbranch "$BRANCH"
@@ -81,14 +101,31 @@ git -C "$GITWORKDIR" checkout HEAD -f
 git -C "$GITWORKDIR" filter-branch -f --msg-filter 'grep --text -B1 -E -v "FossilOrigin-Name: [[:alnum:]]"' HEAD
 
 # Update mirror using the contents of said temporary repo
-git -C "$MIRROR" checkout "$BRANCH"
-! git -C "$MIRROR" remote remove local # in case previous run failed
-git -C "$MIRROR" remote add local "$GITWORKDIR"
-git -C "$MIRROR" fetch local
+git -C "$GITCOPY" checkout "$BRANCH"
+! git -C "$GITCOPY" remote remove local # in case previous run failed
+git -C "$GITCOPY" remote add local "$GITWORKDIR"
+git -C "$GITCOPY" fetch local
 
 # This is like cherry-pick, but it doesn't fall over on empty commits or want an editor window
-git -C "$MIRROR" reset --hard local/"$BRANCH"
-git -C "$MIRROR" rebase "$BRANCH"
+git -C "$GITCOPY" reset --hard local/"$BRANCH"
+git -C "$GITCOPY" rebase "$BRANCH"
+
+AFTER=$(git -C "$GITCOPY" rev-parse "$BRANCH")
+
+
+if [[ "$BEFORE" == "$AFTER" ]]; then
+    echo "No change to underlying repo"
+else
+    echo "Before running, $BEFORE. After running, $AFTER"
+
+    if git -C "$GITCOPY" config remote.external.url > /dev/null;
+    then
+        echo "external remote configured, pushing to it"
+        git -C "$GITCOPY" push external --mirror
+    else
+        echo "no external defined" ;
+    fi
+fi  
 
 echo "done"
 exit 0
