@@ -52,7 +52,7 @@ then
 else
     echo "$GITCOPY does not exist, creating directory"
     mkdir "$GITCOPY"
-    git init "$GITCOPY" --initial-branch "$BRANCH"
+    git init "$GITCOPY" # --initial-branch "$BRANCH" # unavailable on old git instances
     git -C "$GITCOPY" config user.name "$USER"
     git -C "$GITCOPY" checkout -b "$BRANCH"
 
