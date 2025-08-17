@@ -44,7 +44,7 @@ apt update --yes
 apt install --yes openssh-server
 systemctl restart ssh
 
-apt install --yes linux-headers-$(uname-r)
+apt install --yes linux-headers-$(uname -r)
 apt install --yes dkms
 apt install --yes debootstrap gdisk
 
