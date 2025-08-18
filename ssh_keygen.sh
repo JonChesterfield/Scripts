@@ -2,11 +2,36 @@
 
 mkdir -p ~/.ssh
 
-touch ~/.ssh/config
-chmod 600 ~/.ssh/config
-
 touch ~/.ssh/authorized_keys
 chmod 644 ~/.ssh/authorized_keys
+
+if [[ -f ~/.ssh/config ]]
+then
+    echo "~/ssh/config already exists"
+else
+cat << EOF > ~/.ssh/config
+Include ~/.ssh/config.local
+
+Compression yes
+IdentitiesOnly yes
+ForwardAgent no
+ServerAliveInterval 60
+ServerAliveCountMax 10
+
+Host github.com-JonChesterfield
+  HostName github.com
+  IdentityFile ~/.ssh/github_id_rsa
+  IdentitiesOnly yes
+
+Host gitlab.com
+  HostName gitlab.com
+  IdentityFile ~/.ssh/gitlab_id_rsa
+  IdentitiesOnly yes
+
+EOF
+chmod 600 ~/.ssh/config
+fi
+
 
 if [[ -f ~/.ssh/id_rsa ]]
 then
