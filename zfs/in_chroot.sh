@@ -44,6 +44,9 @@ mkdosfs -F 32 -s 1 -n EFI ${DISK}-part2
 mkdir /boot/efi
 echo /dev/disk/by-uuid/$(blkid -s UUID -o value ${DISK}-part2) \
    /boot/efi vfat defaults 0 0 >> /etc/fstab
+# Mount seems to fail if done immediately after the fstab, try leaving it a few seconds
+# todo, presumably should be reloading something
+sleep 3
 mount /boot/efi
 apt install --yes grub-efi-amd64 shim-signed
 
