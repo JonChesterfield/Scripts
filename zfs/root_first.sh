@@ -17,7 +17,7 @@ fi
 
 
 if [ "$#" -ne 2 ]; then
-    echo "Check arguments, expected $disk iface"
+    echo "Check arguments, expected disk iface"
     ls /dev/disk/by-id
     exit 1
 fi
@@ -137,6 +137,7 @@ deb http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
 deb-src http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
 EOF
 
+# Ideally it would start running this script automatically
 cp in_chroot.sh /mnt/tmp/in_chroot.sh
 
 mount --make-private --rbind /dev  /mnt/dev

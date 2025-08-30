@@ -73,10 +73,10 @@ EOF
 systemctl enable zfs-import-bpool.service
 
 
-apt install --yes openssh-server
+apt install --yes openssh-server iw tasksel git
 
 # temporary
-sed -i sed 's$#PermitRootLogin prohibit-password$PermitRootLogin yes # todo, undo this...$g' /etc/ssh/sshd_config
+sed -i 's$#PermitRootLogin prohibit-password$PermitRootLogin yes # todo, undo this...$g' /etc/ssh/sshd_config
 
 grub-probe /boot
 update-initramfs -c -k all
