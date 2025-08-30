@@ -4,8 +4,6 @@ set -e
 set -x
 set -o pipefail
 
-HOSTNAME=milan
-
 id=`id -u`
 if [ $id = "0" ]
 then
@@ -16,14 +14,15 @@ else
 fi
 
 
-if [ "$#" -ne 2 ]; then
-    echo "Check arguments, expected disk iface"
+if [ "$#" -ne 3 ]; then
+    echo "Check arguments, expected hostname disk iface"
     ls /dev/disk/by-id
     exit 1
 fi
 
-DISK=$1
-IFACE=$2
+HOSTNAME=$1
+DISK=$2
+IFACE=$3
 
 
 if [[ -e "$DISK" ]]
@@ -143,6 +142,7 @@ cp in_chroot.sh /mnt/tmp/in_chroot.sh
 mount --make-private --rbind /dev  /mnt/dev
 mount --make-private --rbind /proc /mnt/proc
 mount --make-private --rbind /sys  /mnt/sys
+echo "Continuation is in /tmp/in_chroot.sh"
 chroot /mnt /usr/bin/env DISK=$DISK bash --login
 
 
