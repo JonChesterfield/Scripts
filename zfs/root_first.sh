@@ -64,6 +64,9 @@ sgdisk     -n2:1M:+512M   -t2:EF00 $DISK
 sgdisk     -n3:0:+1G      -t3:BF01 $DISK
 sgdisk     -n4:0:0        -t4:BF00 $DISK
 
+sync
+sleep 3
+
 zpool create \
     -o ashift=12 \
     -o autotrim=on \
@@ -80,6 +83,7 @@ zpool create \
 zpool create \
     -o ashift=12 \
     -o autotrim=on \
+    -O encryption=on -O keylocation=prompt -O keyformat=passphrase \
     -O acltype=posixacl -O xattr=sa -O dnodesize=auto \
     -O compression=lz4 \
     -O normalization=formD \
@@ -103,6 +107,10 @@ chmod 700 /mnt/root
 mkdir /mnt/run
 mount -t tmpfs tmpfs /mnt/run
 mkdir /mnt/run/lock
+
+# Reasonable on single disk systems
+zfs set copies=2 bpool
+zfs set copies=2 rpool
 
 debootstrap trixie /mnt
 

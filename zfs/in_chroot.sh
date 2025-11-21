@@ -17,7 +17,6 @@ fi
 
 if [ "$#" -ne 0 ]; then
     echo "Check arguments, expected none"
-    ls /dev/disk/by-id
     exit 1
 fi
 
