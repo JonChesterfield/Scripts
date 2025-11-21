@@ -20,6 +20,8 @@ if [ "$#" -ne 3 ]; then
     exit 1
 fi
 
+# todo, setting the iface file stops network manager running the
+# interface, which is a problem if wanting to use network-manager...
 HOSTNAME=$1
 DISK=$2
 IFACE=$3

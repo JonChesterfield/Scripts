@@ -51,6 +51,10 @@ apt install --yes grub-efi-amd64 shim-signed
 
 apt purge --yes os-prober
 
+# Make the newly booted system slightly less annoying to debug
+apt install --yes git net-tools sysfsutils pciutils
+
+
 passwd
 
 cat <<EOF > /etc/systemd/system/zfs-import-bpool.service
