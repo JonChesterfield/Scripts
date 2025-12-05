@@ -82,10 +82,12 @@ zpool create \
     -O canmount=off -O mountpoint=/boot -R /mnt \
     bpool ${DISK}-part3
 
+# Todo, control via counting args or similar
+# -O encryption=on -O keylocation=prompt -O keyformat=passphrase \
+
 zpool create \
     -o ashift=12 \
     -o autotrim=on \
-    -O encryption=on -O keylocation=prompt -O keyformat=passphrase \
     -O acltype=posixacl -O xattr=sa -O dnodesize=auto \
     -O compression=lz4 \
     -O normalization=formD \
@@ -105,6 +107,9 @@ zfs create                     rpool/home
 zfs create -o mountpoint=/root rpool/home/root
 chmod 700 /mnt/root
 
+# Likely to want different settings for opt
+zfs create                     rpool/opt
+
 # Have a tmpfs
 mkdir /mnt/run
 mount -t tmpfs tmpfs /mnt/run
@@ -113,6 +118,10 @@ mkdir /mnt/run/lock
 # Reasonable on single disk systems
 zfs set copies=2 bpool
 zfs set copies=2 rpool
+
+# Want these to be fast more than want them to self-heal
+zfs set copies=1 rpool/home
+zfs set copies=1 rpool/opt
 
 debootstrap trixie /mnt
 
