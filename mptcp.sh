@@ -29,7 +29,7 @@ VER=openmptcprouter-v0.63-6.12-r0+30806-070d8eb4d5-x86-64-generic
 
 wget https://releases.openmptcprouter.com/v0.63-6.12/x86_64/targets/x86/64/$VER-ext4-combined-efi.img.gz
 
-echo 'a61c1ba9e4a2993955b28ffeb26adf95e435189c330da7108d1ea845b464ea66 $VER-ext4-combined-efi.img.gz' > $VER-ext4-combined-efi.img.gz.sha256sum
+echo "a61c1ba9e4a2993955b28ffeb26adf95e435189c330da7108d1ea845b464ea66 $VER-ext4-combined-efi.img.gz" > $VER-ext4-combined-efi.img.gz.sha256sum
 
 sha256sum -c $VER-ext4-combined-efi.img.gz.sha256sum
 
