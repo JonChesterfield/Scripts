@@ -35,7 +35,7 @@ sha256sum -c $VER-ext4-combined-efi.img.gz.sha256sum
 
 gzip -d $VER-ext4-combined-efi.img.gz
 
-dd if=/$VER-ext4-combined-efi.img of=$DISK bs=4k
+dd if=$VER-ext4-combined-efi.img of=$DISK bs=4k
 sync
 
 
